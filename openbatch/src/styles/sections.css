@@ -1,0 +1,78 @@
+/* Seção: Terminal */
+#terminal-output {
+    height: 65vh;
+    background-color: #0d1117;
+    color: #c9d1d9;
+    font-family: var(--font-mono);
+    padding: 15px;
+    white-space: pre-wrap;
+    overflow-y: auto;
+    border-radius: 5px;
+}
+#terminal-output .prompt {
+    color: #58a6ff;
+}
+#terminal-output .user {
+    color: #7ee787;
+}
+
+/* Seção: Submissão de Job */
+@media (min-width: 1024px) {
+  .job-form-grid {
+    grid-template-columns: repeat(6, 1fr);
+    gap: 25px;
+  }
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+.info-grid .command-box {
+    background-color: var(--bg-color);
+    padding: 15px;
+    border-radius: 5px;
+    font-family: var(--font-mono);
+}
+.info-grid .command-box p {
+    margin: 5px 0 0 0;
+    font-family: var(--font-family);
+    font-size: 0.9em;
+    color: var(--text-secondary-color);
+}
+
+.job-form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    align-items: flex-end;
+}
+.full-width {
+    grid-column: 1 / -1;
+}
+
+.scrollable-output {
+    background-color: #0d1117;
+    color: var(--text-secondary-color);
+    font-family: var(--font-mono);
+    height: 250px;
+    overflow-y: auto; /* Adiciona a barra de rolagem vertical APENAS quando necessário */
+    padding: 15px;
+    border-radius: 5px;
+    margin-top: 15px;
+    white-space: pre-wrap;
+    border: 1px solid rgba(160, 160, 160, 0.2);
+}
+
+.command-box {
+    transition: all 0.2s ease-in-out;
+}
+
+.command-box:hover {
+    cursor: pointer;
+    transform: translateY(-4px);
+    border-color: #7dd3fc;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    background-color: var(--header-bg);
+}

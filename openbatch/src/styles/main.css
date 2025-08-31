@@ -1,0 +1,61 @@
+:root {
+    --bg-color: #101827;
+    --header-bg: #1A273D;
+    --container-bg: rgba(26, 39, 61, 0.5);
+    --border-color: #38BDF8;
+    --text-color: #E0E0E0;
+    --text-secondary-color: #A0A0A0;
+    --accent-color: #38BDF8;
+    --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-mono: 'Courier New', Courier, monospace;
+}
+
+/* Estilos Globais */
+html, body {
+    height: 100%;
+    margin: 0;
+    font-family: var(--font-family);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow-x: hidden;
+}
+
+.container {
+    padding: 20px 40px;
+}
+
+/* Cabeçalho */
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 40px;
+    background-color: var(--header-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+header .logo {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+/* Navegação por Abas */
+nav {
+    display: flex;
+    background-color: var(--header-bg);
+    padding: 0 40px;
+}
+
+/* Rodapé */
+footer {
+    text-align: center;
+    padding: 20px 40px;
+    font-size: 0.8em;
+    color: var(--text-secondary-color);
+    margin-top: 40px;
+}
+footer a {
+    color: var(--accent-color);
+    text-decoration: none;
+    margin: 0 10px;
+}
