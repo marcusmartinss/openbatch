@@ -19,7 +19,8 @@ function TerminalComponent() {
       }
 
       // Passa o token como um parâmetro na URL do WebSocket.
-      const socket = new WebSocket(`ws://localhost:8080?token=${token}`);
+      const wsUrl = `ws://${window.location.hostname}:8080/?token=${token}`;
+      const ws = new WebSocket(wsUrl);
 
       const term = new Terminal({
         cursorBlink: true,
