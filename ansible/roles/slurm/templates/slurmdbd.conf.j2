@@ -1,0 +1,19 @@
+# Arquivo de configuração do SlurmDB gerado pelo Ansible
+# Configurações manuais serão sobrescritas
+
+# Configurações de autenticação
+AuthType=auth/munge
+#
+# Configurações do SlurmDBD
+DbdHost=localhost
+SlurmUser=slurm
+LogFile=/var/log/slurm/slurmdbd.log
+PidFile=/var/run/slurmdbd.pid
+#
+# Configurações do Banco de Dados
+StorageType=accounting_storage/mysql
+StorageHost=localhost
+StoragePort=3306
+StoragePass={{ db_password }}
+StorageUser={{ db_user }}
+StorageLoc={{ db_name }}

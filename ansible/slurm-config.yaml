@@ -1,0 +1,11 @@
+- name: 1. Instalar e Configurar o Nó Controlador (Manager)
+  hosts: slurm_controller
+  become: yes
+  roles:
+    - role: slurm
+
+- name: 2. Instalar e Configurar os Nós de Computação (Workers)
+  hosts: slurm_nodes
+  become: yes
+  roles:
+    - role: slurm

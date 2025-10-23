@@ -1,0 +1,222 @@
+- name: Definir o caminho de configuração do Slurm
+  set_fact:
+    slurm_conf_dir: "/etc/slurm"
+
+- name: Instalar pacotes essenciais (Munge e NTP)
+  package:
+    name: [ 'munge', 'chrony' ]
+    state: present
+    update_cache: yes
+
+- name: Garantir que o serviço de tempo esteja ativo
+  service:
+    name: chronyd
+    state: started
+    enabled: yes
+
+- name: Criar usuários 'slurm' e 'munge'
+  user:
+    name: "{{ item }}"
+    system: yes
+    shell: /bin/false
+  loop: [ 'slurm', 'munge' ]
+
+- name: Criar diretórios de log e configuração do Slurm
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: slurm
+    group: slurm
+    mode: '0755'
+  loop: [ '/etc/slurm', '/var/log/slurm' ]
+
+- name: Garantir que todos os hosts do cluster estejam no /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '.*\s+{{ hostvars[item].inventory_hostname }}$'
+    line: "{{ hostvars[item].static_ip }} {{ hostvars[item].inventory_hostname }}"
+    state: present
+  loop: "{{ groups['slurm_cluster'] }}"
+  loop_control:
+    loop_var: item
+
+- name: Bloco de instalação do Ambiente HPC
+  block:
+    - name: Definir pacotes de HPC para RedHat/CentOS/Rocky
+      set_fact:
+        hpc_packages:
+          - gcc
+          - gcc-c++
+          - gcc-gfortran
+          - make
+          - cmake
+          - git
+          - openmpi
+          - openmpi-devel
+          - python3-pip
+          - python3-devel
+          - python3-numpy
+          - python3-scipy
+          - python3-pandas
+          - environment-modules
+      when: ansible_os_family == "RedHat"
+    
+    - name: Definir pacotes de HPC para Debian
+      set_fact:
+        hpc_packages:
+          - build-essential
+          - gfortran
+          - cmake
+          - git
+          - libopenmpi-dev
+          - openmpi-bin
+          - python3-pip
+          - python3-dev
+          - python3-numpy
+          - python3-scipy
+          - python3-pandas
+          - environment-modules
+      when: ansible_os_family == "Debian"
+
+    - name: Instalar compiladores, bibliotecas e ferramentas de HPC
+      package:
+        name: "{{ hpc_packages }}"
+        state: present
+
+- name: Gerar e distribuir a chave Munge
+  block:
+    - name: Gerar munge.key no controller
+      command: mungekey -f
+      args:
+        creates: /etc/munge/munge.key
+      delegate_to: "{{ groups['slurm_controller'][0] }}"
+      run_once: true
+
+    - name: Buscar a munge.key do controller
+      fetch:
+        src: /etc/munge/munge.key
+        dest: /tmp/munge.key
+        flat: yes
+      delegate_to: "{{ groups['slurm_controller'][0] }}"
+      run_once: true
+
+    - name: Distribuir munge.key para todos os nós
+      copy:
+        src: /tmp/munge.key
+        dest: /etc/munge/munge.key
+        owner: munge
+        group: munge
+        mode: '0400'
+      notify: Reiniciar munge
+
+- name: Bloco de configuração do Slurm Controller e SlurmDBD
+  when: inventory_hostname in groups['slurm_controller']
+  block:
+    - name: Instalar pacotes do Controller, DB e dependências
+      package:
+        name:
+          - slurmctld
+          - slurmdbd
+          - mariadb-server
+          - python3-pymysql
+        state: present
+
+    - name: Habilitar e iniciar serviço MariaDB
+      service:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Aguardar o MariaDB estar pronto para conexões
+      wait_for:
+        port: 3306
+        delay: 5
+      when: ansible_os_family == "Debian"
+
+    - name: Criar banco de dados para o Slurm
+      community.mysql.mysql_db:
+        name: "{{ db_name }}"
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Criar usuário do banco de dados para o Slurm
+      community.mysql.mysql_user:
+        name: "{{ db_user }}"
+        password: "{{ db_password }}"
+        priv: "{{ db_name }}.*:ALL"
+        host: 'localhost'
+        state: present
+        login_unix_socket: /var/run/mysqld/mysqld.sock
+
+    - name: Criar arquivo de configuração slurmdbd.conf
+      template:
+        src: slurmdbd.conf.j2
+        dest: /etc/slurm/slurmdbd.conf
+        owner: slurm
+        group: slurm
+        mode: '0600'
+      notify: Reiniciar slurmdbd
+
+    - name: Criar diretório de estado do slurmctld
+      file:
+        path: /var/spool/slurmctld
+        state: directory
+        owner: slurm
+        group: slurm
+        mode: '0755'
+
+    - name: Gerar slurm.conf a partir do template
+      template:
+        src: roles/slurm/templates/slurm.conf.j2
+        dest: "{{ slurm_conf_dir }}/slurm.conf"
+        owner: slurm
+        group: slurm
+        mode: '0644'
+      notify: 
+        - Reiniciar slurmctld
+        - Reiniciar slurmd
+
+    - name: Habilitar e iniciar serviço slurmdbd
+      service:
+        name: slurmdbd
+        state: started
+        enabled: yes
+
+    - name: Habilitar e iniciar serviço slurmctld
+      service:
+        name: slurmctld
+        state: started
+        enabled: yes
+
+- name: Bloco de configuração do Slurm Node
+  when: inventory_hostname in groups['slurm_nodes']
+  block:
+    - name: Instalar pacotes do Slurm Node
+      package:
+        name: slurmd
+        state: present
+
+    - name: Criar diretório de estado do slurmd
+      file:
+        path: /var/spool/slurmd
+        state: directory
+        owner: slurm
+        group: slurm
+        mode: '0755'
+
+    - name: Sincronizar slurm.conf do controller para os nós
+      copy:
+        src: /etc/slurm/slurm.conf
+        dest: /etc/slurm/slurm.conf
+        remote_src: yes
+      delegate_to: "{{ groups['slurm_controller'][0] }}"
+      notify: Reiniciar slurmd
+
+    - name: Habilitar e iniciar serviço slurmd
+      service:
+        name: slurmd
+        state: started
+        enabled: yes
+
+- name: Forçar a execução dos handlers (reiniciar serviços)
+  meta: flush_handlers

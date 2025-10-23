@@ -1,0 +1,16 @@
+# Arquivo de rede gerado pelo Ansible
+# Configurações manuais serão sobrescritas
+
+source-directory /etc/network/interfaces.d
+
+# Interface de loopback
+auto lo
+iface lo inet loopback
+
+# Interface principal
+auto {{ interface_name }}
+iface {{ interface_name }} inet static
+    address {{ static_ip }}
+    netmask {{ static_netmask }}
+    gateway {{ static_gateway }}
+    dns-nameservers {{ static_dns1 }} {{ static_dns2 }}

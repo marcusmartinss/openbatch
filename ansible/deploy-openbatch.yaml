@@ -1,0 +1,5 @@
+- name: Deploy da Aplicação Web OpenBatch
+  hosts: slurm_controller
+  become: yes
+  roles:
+    - role: openbatch

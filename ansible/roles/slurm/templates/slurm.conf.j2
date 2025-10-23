@@ -1,0 +1,40 @@
+# Arquivo de configuração do Slurm gerado pelo Ansible
+# Configurações manuais serão sobrescritas
+
+# INFORMAÇÕES GERAIS
+AuthType=auth/munge
+ClusterName=meu_cluster_slurm
+SlurmctldHost={{ groups['slurm_controller'][0] }}
+SlurmctldAddr={{ hostvars[groups['slurm_controller'][0]].static_ip }}
+MpiDefault=none
+ProctrackType=proctrack/pgid
+ReturnToService=1
+SlurmctldPidFile=/var/run/slurmctld.pid
+SlurmctldPort=6817
+SlurmdPidFile=/var/run/slurmd.pid
+SlurmdPort=6818
+SlurmdSpoolDir=/var/spool/slurmd
+StateSaveLocation=/var/spool/slurmctld
+SlurmUser=slurm
+TaskPlugin=task/affinity
+
+# ACCOUNTING - CONFIGURAÇÃO PARA O SLURMDBD
+JobAcctGatherType=jobacct_gather/linux
+AccountingStorageType=accounting_storage/slurmdbd
+AccountingStorageHost={{ hostvars[groups['slurm_controller'][0]]['inventory_hostname'] }}
+
+# EVITAR BUSCA DNS
+CommunicationParameters=NoAddrCache
+
+# LOGGING
+SlurmctldLogFile=/var/log/slurm/slurmctld.log
+SlurmdLogFile=/var/log/slurm/slurmd.log
+DebugFlags=NO_CONF_HASH
+
+# DEFINIÇÃO DOS NÓS DE COMPUTAÇÃO
+{% for host in groups['slurm_nodes'] %}
+NodeName={{ hostvars[host]['inventory_hostname'] }} NodeAddr={{ hostvars[host].static_ip }} CPUs={{ hostvars[host].ansible_processor_vcpus | default(hostvars[host].ansible_processor_cores, true) | default(1, true) }} RealMemory={{ (hostvars[host].ansible_memtotal_mb | default(hostvars[host].ansible_memory_mb.real.total, true) | default(1024, true) * 0.95) | int }} State=UNKNOWN
+{% endfor %}
+
+# DEFINIÇÃO DAS PARTIÇÕES
+PartitionName=default_partition Nodes=ALL Default=YES MaxTime=INFINITE State=UP

@@ -1,0 +1,5 @@
+openbatch_port: 8080
+openbatch_repo: 'https://github.com/marcusmartinss/openbatch.git'
+openbatch_version: 'main'
+openbatch_user: 'openbatch'
+openbatch_install_dir: '/opt/openbatch'

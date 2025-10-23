@@ -1,0 +1,11 @@
+# Arquivo de rede gerado pelo Ansible
+# Configurações manuais serão sobrescritas
+
+DEVICE={{ interface_name }}
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR={{ static_ip }}
+NETMASK={{ static_netmask }}
+GATEWAY={{ static_gateway }}
+DNS1={{ static_dns1 }}
+DNS2={{ static_dns2 }}

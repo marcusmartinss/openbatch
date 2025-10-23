@@ -1,0 +1,32 @@
+# Arquivo do serviço OpenBatch gerado pelo Ansible
+# Configurações manuais serão sobrescritas
+
+DEVICE={{ interface_name }}
+BOOTPROTO=static
+ONBOOT=yes
+IPADDR={{ static_ip }}
+NETMASK={{ static_netmask }}
+GATEWAY={{ static_gateway }}
+DNS1={{ static_dns1 }}
+DNS2={{ static_dns2 }}
+
+[Unit]
+Description=OpenBatch Web Interface Server
+After=network.target slurmctld.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory={{ openbatch_install_dir }}/openbatch
+
+# Passa a porta como uma variável de ambiente para a aplicação Node.js
+Environment="PORT={{ openbatch_port }}"
+
+# O comando para iniciar o servidor
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

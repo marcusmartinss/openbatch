@@ -1,0 +1,70 @@
+- name: Habilitar o módulo Node.js 18 (para RHEL/CentOS/Rocky 8+)
+  command: "dnf module enable -y nodejs:18"
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+
+- name: Instalar Node.js e NPM
+  package:
+    name: ['nodejs', 'npm']
+    state: present
+
+- name: Instalar dependências de compilação para o OpenBatch
+  package:
+    name:
+      - build-essential
+      - libpam0g-dev
+    state: present
+  when: ansible_os_family == "Debian"
+
+- name: Criar um usuário de sistema para a aplicação OpenBatch
+  user:
+    name: "{{ openbatch_user }}"
+    system: yes
+    shell: /bin/false
+    home: "/home/{{ openbatch_user }}"
+
+- name: Criar o diretório de instalação com as permissões corretas
+  ansible.builtin.file:
+    path: "{{ openbatch_install_dir }}"
+    state: directory
+    owner: "{{ openbatch_user }}"
+    group: "{{ openbatch_user }}"
+    mode: '0755'
+
+- name: Clonar ou atualizar o repositório do OpenBatch
+  ansible.builtin.git:
+    repo: "{{ openbatch_repo }}"
+    dest: "{{ openbatch_install_dir }}"
+    version: "{{ openbatch_version }}"
+    force: yes
+  become: yes
+  become_user: "{{ openbatch_user }}"
+
+- name: Instalar dependências do projeto com NPM
+  community.general.npm:
+    path: "{{ openbatch_install_dir }}/openbatch"
+  become: yes
+  become_user: "{{ openbatch_user }}"
+
+- name: Construir a aplicação (npm run build)
+  ansible.builtin.command:
+    cmd: npm run build
+    chdir: "{{ openbatch_install_dir }}/openbatch"
+    creates: "{{ openbatch_install_dir }}/openbatch/dist"
+  become: yes
+  become_user: "{{ openbatch_user }}"
+
+- name: Criar o arquivo de serviço systemd para o OpenBatch
+  template:
+    src: openbatch.service.j2
+    dest: /etc/systemd/system/openbatch.service
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Habilitar e iniciar o serviço OpenBatch
+  ansible.builtin.systemd:
+    name: openbatch
+    state: started
+    enabled: yes
+    daemon_reload: yes

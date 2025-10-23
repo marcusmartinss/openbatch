@@ -1,0 +1,23 @@
+- name: Reiniciar munge
+  service:
+    name: munge
+    state: restarted
+    enabled: yes
+
+- name: Reiniciar slurmdbd
+  service:
+    name: slurmdbd
+    state: restarted
+    enabled: yes
+
+- name: Reiniciar slurmctld
+  service:
+    name: slurmctld
+    state: restarted
+    enabled: yes
+
+- name: Reiniciar slurmd
+  service:
+    name: slurmd
+    state: restarted
+    enabled: yes
