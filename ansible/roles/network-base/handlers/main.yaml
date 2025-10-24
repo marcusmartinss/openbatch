@@ -1,0 +1,9 @@
+- name: Reiniciar networking Debian
+  ansible.builtin.systemd:
+    name: networking
+    state: restarted
+
+- name: Reiniciar network RedHat
+  ansible.builtin.systemd:
+    name: network
+    state: restarted

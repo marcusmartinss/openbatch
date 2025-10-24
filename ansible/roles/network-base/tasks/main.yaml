@@ -1,0 +1,39 @@
+- name: Configurar IP estático com 'interfaces' (Debian/Ubuntu)
+  when: ansible_os_family == "Debian"
+  block:
+    - name: Garantir que o pacote 'resolvconf' esteja instalado (Debian)
+      ansible.builtin.package:
+        name: resolvconf
+        state: present
+        update_cache: yes
+
+    - name: Criar arquivo de configuração /etc/network/interfaces (Debian)
+      ansible.builtin.template:
+        src: interfaces.j2
+        dest: /etc/network/interfaces
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reiniciar networking Debian
+
+- name: Configurar IP estático com 'ifcfg' (RedHat/CentOS)
+  when: ansible_os_family == "RedHat"
+  block:
+    - name: Criar arquivo de configuração ifcfg (RedHat)
+      ansible.builtin.template:
+        src: ifcfg.j2 # Busca o template DENTRO do role
+        dest: "/etc/sysconfig/network-scripts/ifcfg-{{ interface_name }}"
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reiniciar network RedHat
+
+- name: Garantir que todos os hosts do cluster estejam no /etc/hosts
+  ansible.builtin.lineinfile:
+    path: /etc/hosts
+    regexp: '.*\s+{{ hostvars[item].inventory_hostname | regex_escape() }}$' # Usa regex_escape para nomes com '-'
+    line: "{{ hostvars[item].static_ip }} {{ hostvars[item].inventory_hostname }}"
+    state: present
+  loop: "{{ groups['slurm_cluster'] }}"
+  loop_control:
+    loop_var: item

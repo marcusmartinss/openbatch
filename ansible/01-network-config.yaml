@@ -1,0 +1,6 @@
+- name: Configurar Rede Base do Cluster
+  hosts: slurm_cluster
+  become: yes
+  gather_facts: yes
+  roles:
+    - role: network-base
