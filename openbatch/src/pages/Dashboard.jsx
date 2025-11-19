@@ -1,36 +1,37 @@
-import { useState } from 'react';
-import Header from '../components/Header';
-import Navigation from '../components/Navigation';
-import Footer from '../components/Footer';
-import TerminalComponent from '../components/sections/Terminal';
-import SubmitJob from '../components/sections/SubmitJob';
-import UploadModules from '../components/sections/UploadModules';
+import React, { useState } from 'react';
+import Header from '../components/Header.jsx';
+import Footer from '../components/Footer.jsx';
+import Navigation from '../components/Navigation.jsx';
+
+import Terminal from '../components/sections/Terminal.jsx';
+import SubmitJob from '../components/sections/SubmitJob.jsx';
+import UploadModules from '../components/sections/UploadModules.jsx';
+import Observability from '../components/sections/Observability.jsx';
 
 function Dashboard({ user, onLogout }) {
   const [activeTab, setActiveTab] = useState('terminal');
 
-  const renderTabContent = () => {
-    switch (activeTab) {
-      case 'terminal':
-        return <TerminalComponent />;
-      case 'submitJob':
-        return <SubmitJob />;
-      case 'uploadModules':
-        return <UploadModules />;
-      default:
-        return <TerminalComponent />;
-    }
-  };
-
   return (
-    <>
+    <div className="dashboard-layout">
       <Header user={user} onLogout={onLogout} />
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      
+      <Navigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+      />
+
       <main className="container">
-        {renderTabContent()}
+        <div style={{ display: activeTab === 'terminal' ? 'block' : 'none', height: '100%' }}>
+          <Terminal />
+        </div>
+
+        {activeTab === 'submitJob' && <SubmitJob />}
+        {activeTab === 'uploadModules' && <UploadModules />}
+        {activeTab === 'observability' && <Observability />}
       </main>
+      
       <Footer />
-    </>
+    </div>
   );
 }
 
