@@ -2,13 +2,21 @@ import React from 'react';
 
 function Header({ user, onLogout }) {
   return (
-    <header>
-      <div className="logo">OpenBatch</div>
+    <header className="main-header">
+      <div className="logo">
+        OpenBatch
+      </div>
+      
       <div className="user-info">
-        <span>Olá, {user || 'Usuário'}!</span>
+        {/* Usando as classes .user-greeting e .user-name definidas no CSS */}
+        <span className="user-greeting">
+          Olá, <span className="user-name">{user}</span>
+        </span>
+        
         <button
           onClick={onLogout}
-          className="logout-btn" 
+          className="logout-btn"
+          aria-label="Sair da aplicação"
         >
           Sair
         </button>
