@@ -5,10 +5,11 @@ function Navigation({ activeTab, setActiveTab }) {
     { id: 'terminal', label: 'Terminal CLI' },
     { id: 'submitJob', label: 'Submeter Job (SLURM)' },
     { id: 'uploadModules', label: 'Upload Módulos' },
+    { id: 'observability', label: 'Observabilidade' },
   ];
 
   return (
-    <nav>
+    <nav className="main-nav">
       {tabs.map(tab => (
         <button
           key={tab.id}
