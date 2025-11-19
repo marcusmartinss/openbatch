@@ -10,6 +10,10 @@
     --font-mono: 'Courier New', Courier, monospace;
 }
 
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
 /* Estilos Globais */
 html, body {
     height: 100%;
@@ -58,4 +62,21 @@ footer a {
     color: var(--accent-color);
     text-decoration: none;
     margin: 0 10px;
+}
+
+/* Ajustes para Mobile */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .main-header {
+        padding: 10px 15px;
+    }
+    
+    nav {
+        padding: 0 10px;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
 }

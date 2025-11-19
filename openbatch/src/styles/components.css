@@ -160,6 +160,7 @@ input[type="file"],
 select,
 textarea {
     width: 100%;
+    max-width: 100%;
     background-color: rgba(15, 23, 42, 0.6);
     border: 1px solid var(--border-subtle);
     border-radius: var(--radius-sm);
@@ -406,3 +407,4 @@ button {
     margin: 0;
     line-height: 1.4;
 }
+
