@@ -45,7 +45,7 @@ function SubmitJob() {
   };
 
   return (
-    <div>
+    <>
       <div className="content-box">
         <h2>Comandos Rápidos</h2>
         <p>Selecione um template abaixo para preencher o comando automaticamente:</p>
@@ -132,7 +132,7 @@ function SubmitJob() {
           <div ref={logsEndRef} />
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
