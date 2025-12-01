@@ -30,6 +30,21 @@
     mode: '0755'
   loop: [ '/etc/slurm', '/var/log/slurm' ]
 
+- name: Configurar proteção contra Fork Bomb (limite de processos)
+  ansible.builtin.blockinfile:
+    path: /etc/security/limits.conf
+    block: |
+      # Limite de processos para usuários comuns para evitar Fork Bombs
+      * hard nproc 4096
+      * soft nproc 2048
+      
+      # Isentar root e slurm (importante para não travar o cluster)
+      root hard nproc unlimited
+      root soft nproc unlimited
+      slurm hard nproc unlimited
+      slurm soft nproc unlimited
+    marker: "# {mark} ANSIBLE MANAGED BLOCK: FORK BOMB PROTECTION"
+
 - name: Garantir que todos os hosts do cluster estejam no /etc/hosts
   ansible.builtin.lineinfile:
     path: /etc/hosts
@@ -210,6 +225,32 @@
         dest: /etc/slurm/slurm.conf
         remote_src: yes
       delegate_to: "{{ groups['slurm_controller'][0] }}"
+      notify: Reiniciar slurmd
+
+    - name: Criar configuração de Cgroups do Slurm
+      template:
+        src: roles/slurm/templates/cgroup.conf.j2
+        dest: "{{ slurm_conf_dir }}/cgroup.conf"
+        owner: slurm
+        group: slurm
+        mode: '0644'
+      notify: Reiniciar slurmd
+    
+    - name: Criar diretório para override do systemd do Slurmd
+      file:
+        path: /etc/systemd/system/slurmd.service.d
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'
+
+    - name: Configurar override do systemd (TasksMax)
+      template:
+        src: roles/slurm/templates/slurmd.service.conf.j2
+        dest: /etc/systemd/system/slurmd.service.d/override.conf
+        owner: root
+        group: root
+        mode: '0644'
       notify: Reiniciar slurmd
 
     - name: Habilitar e iniciar serviço slurmd

@@ -8,13 +8,41 @@
     name: ['nodejs', 'npm']
     state: present
 
-- name: Instalar dependências de compilação para o OpenBatch
+- name: Instalar dependências, ferramentas e antivírus
   package:
     name:
       - build-essential
       - libpam0g-dev
+      - clamav
+      - clamav-daemon
     state: present
   when: ansible_os_family == "Debian"
+
+- name: Instalar repositório EPEL
+  package:
+    name: epel-release
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Instalar dependências, ferramentas e Antivírus (RedHat)
+  package:
+    name:
+      - gcc
+      - gcc-c++
+      - make
+      - pam-devel
+      - unzip
+      - clamav
+      - clamav-update
+      - clamd
+    state: present
+  when: ansible_os_family == "RedHat"
+
+- name: Atualizar banco de dados de vírus (freshclam)
+  command: freshclam
+  ignore_errors: yes
+  become: yes
+  when: ansible_os_family == "Debian" or ansible_os_family == "RedHat"
 
 - name: Criar um usuário de sistema para a aplicação OpenBatch
   user:
