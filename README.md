@@ -57,11 +57,11 @@ Edite o arquivo `inventory.ini` preenchendo os IPs e variáveis:
 ```ini
 [slurm_controller]
 # Defina o IP de conexão (ansible_host) e o IP estático desejado (static_ip)
-manager0-tcc ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.10
+manager0 ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.10
 
 [slurm_nodes]
-worker0-tcc ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.11
-worker1-tcc ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.12
+worker0 ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.11
+worker1 ansible_host=192.168.x.x interface_name=eth0 static_ip=192.168.122.12
 
 [all:vars]
 ansible_user=seu_usuario_ssh
