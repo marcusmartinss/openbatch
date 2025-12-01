@@ -1,0 +1,5 @@
+[Service]
+# Proteção contra Fork Bomb no nível do Systemd
+# Permite que o Slurmd gerencie muitos processos (necessário para clusters grandes)
+# mas define um teto técnico para o serviço proteger o kernel.
+TasksMax=infinity
