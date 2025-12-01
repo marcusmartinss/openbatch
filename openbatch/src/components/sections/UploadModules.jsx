@@ -6,11 +6,33 @@ function UploadModules() {
   const [isUploading, setIsUploading] = useState(false);
   const [status, setStatus] = useState({ type: '', message: '' });
 
-  const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+const handleFileChange = (e) => {
+    const selectedFile = e.target.files[0];
+    
+    if (selectedFile) {
+      // Validação de Tipo (MIME type e Extensão)
+      const isZip = selectedFile.type === 'application/zip' || 
+                    selectedFile.type === 'application/x-zip-compressed' ||
+                    selectedFile.name.endsWith('.zip');
+
+      if (!isZip) {
+        setStatus({ type: 'error', message: 'Apenas arquivos .zip são permitidos.' });
+        setFile(null);
+        return;
+      }
+
+      // Validação de Tamanho
+      const maxSize = 50 * 1024 * 1024; // Máximo: 50MB
+      if (selectedFile.size > maxSize) {
+        setStatus({ type: 'error', message: 'O arquivo excede o limite de 50MB.' });
+        setFile(null);
+        return;
+      }
+
+      setFile(selectedFile);
+      setStatus({ type: '', message: '' });
       if (!moduleName) {
-        setModuleName(e.target.files[0].name.replace('.zip', ''));
+        setModuleName(selectedFile.name.replace('.zip', ''));
       }
     }
   };
