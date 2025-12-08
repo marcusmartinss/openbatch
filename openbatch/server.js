@@ -24,8 +24,6 @@ const BLOCKED_USERS = ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', '
 const BLOCKED_EXTENSIONS = ['.exe', '.dll', '.so', '.bin'];
 
 const app = express();
-
-// Configuração do Multer (Salva temporariamente em /tmp)
 const upload = multer({ dest: '/tmp/' });
 
 app.use(cors());
@@ -34,33 +32,30 @@ app.use(express.json());
 
 const server = http.createServer(app);
 
-// --- 1. ENDPOINT DE LOGIN ---
+// --- 1. LOGIN ---
 app.post('/login', (req, res) => {
-  const { username, password } = req.body;
+    const { username, password } = req.body;
+    if (!username || !password) return res.status(400).json({ message: 'Campos obrigatórios.' });
 
-  if (!username || !password) {
-    return res.status(400).json({ message: 'Usuário e senha são obrigatórios.' });
-  }
+    // if (username === 'admin' && password === 'admin') {
+    //     const token = jwt.sign({ username: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
+    //     return res.status(200).json({ message: 'Login DEV.', token });
+    // }
 
-  if (BLOCKED_USERS.includes(username.toLowerCase())) {
-    return res.status(403).json({ message: 'Login para este usuário não é permitido.' });
-  }
+    if (BLOCKED_USERS.includes(username.toLowerCase())) return res.status(403).json({ message: 'Usuário bloqueado.' });
 
-  try {
-    pamAuthenticate({ username, password }, (err) => {
-      if (err) {
-        console.error(`Falha na autenticação PAM para ${username}:`, err);
-        return res.status(401).json({ message: 'Credenciais inválidas.' });
-      }
-      
-      console.log(`Usuário ${username} autenticado com sucesso via PAM.`);
-      const token = jwt.sign({ username: username }, JWT_SECRET, { expiresIn: '1h' });
-      res.status(200).json({ message: 'Autenticação bem-sucedida.', token: token });
-    });
-  } catch (e) {
-    console.error("Erro crítico ao chamar PAM:", e);
-    res.status(500).json({ message: "Erro interno no servidor de autenticação." });
-  }
+    try {
+        pamAuthenticate({ username, password }, (err) => {
+        if (err) {
+            console.error(`Erro PAM ${username}:`, err);
+            return res.status(401).json({ message: 'Credenciais inválidas.' });
+        }
+        const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+        res.status(200).json({ message: 'Sucesso.', token });
+        });
+    } catch (e) {
+        res.status(500).json({ message: "Erro interno PAM." });
+    }
 });
 
 // --- 2. ENDPOINT DE UPLOAD DE MÓDULOS ---
@@ -160,162 +155,178 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
   });
 });
 
-// --- 3. OBSERVABILIDADE (POLLING) ---
+// --- 3. OBSERVABILIDADE ---
 let currentMetrics = {
-  nodes: { idle: 0, allocated: 0, down: 0, total: 0 },
-  cpus: { allocated: 0, total: 0 },
-  memory: { allocated: 0, total: 0 }, // Placeholder para memória (difícil pegar global exato sem scontrol detalhado)
-  jobs: { pending: 0, running: 0, completed: 0 },
-  timestamp: Date.now()
+    nodes: { idle: 0, allocated: 0, down: 0, total: 0 },
+    cpus: { allocated: 0, total: 0 },
+    memory: { allocated: 0, total: 0 },
+    jobs: { pending: 0, running: 0 },
 };
 
-async function fetchSlurmMetrics() {
-  try {
-    // --- A. Métricas de JOBS (squeue) ---
+async function fetchMetrics() {
+try {
+    // A. Jobs (squeue)
     const { stdout: jobsOut } = await execPromise('squeue -h -o "%t"').catch(() => ({ stdout: '' }));
-    
     if (jobsOut) {
-        const jobStates = jobsOut.trim().split('\n');
-        let running = 0, pending = 0;
-        jobStates.forEach(s => { 
-            if(s === 'R') running++; 
-            if(s === 'PD') pending++; 
-        });
-        currentMetrics.jobs = { running, pending, completed: 0 }; // Completed requer sacct (historico)
-    } else {
-        // DADOS SIMULADOS (Placeholder) para demonstração visual se Slurm estiver offline
-        currentMetrics.jobs = { 
-            running: Math.floor(Math.random() * 5) + 1, 
-            pending: Math.floor(Math.random() * 3) 
-        };
+        const lines = jobsOut.trim().split('\n');
+        let r = 0, p = 0;
+        lines.forEach(l => { if(l==='R') r++; if(l==='PD') p++; });
+        currentMetrics.jobs = { running: r, pending: p };
     }
 
-    // --- B. Métricas de NÓS e CPU (sinfo) ---
-    // Formato: state, cpus, memory (se disponível)
+    // B. Nodes & CPUs (sinfo)
+    // Coleta: Estado (%T), CPUs (%c), Memória (%m)
+    // Exemplo de saída: "idle 40 128000"
     const { stdout: sinfoOut } = await execPromise('sinfo -h -o "%T %c %m"').catch(() => ({ stdout: '' }));
     
     if (sinfoOut) {
-        // Lógica real de parsing do sinfo (simplificada)
-        // Exemplo de saída: "idle 4 8000"
         let idle = 0, alloc = 0, down = 0;
         let totalCpus = 0;
+        let allocCpus = 0;
+        let totalMem = 0;
+        let allocMem = 0; // Estimativa baseada em nós alocados
+
         const lines = sinfoOut.trim().split('\n');
         
         lines.forEach(line => {
-            const parts = line.split(' '); // state, cpus, mem
+            if (!line.trim()) return;
+            const parts = line.split(/\s+/); // Separa por espaços
             const state = parts[0];
             const cpus = parseInt(parts[1]) || 0;
-            // const mem = parseInt(parts[2]) || 0; // Memoria total do nó
+            const memMB = parseInt(parts[2]) || 0;
 
-            totalCpus += cpus; // Soma total de CPUs do cluster
-            
-            if (state.includes('idle')) idle++;
-            else if (state.includes('alloc') || state.includes('mix')) alloc++;
-            else down++;
+            totalCpus += cpus;
+            totalMem += memMB;
+
+            if (state.includes('idle')) {
+                idle++;
+            } else if (state.includes('alloc') || state.includes('mix')) {
+                alloc++;
+                allocCpus += cpus; // Simplificação: se o nó está alocado, contamos seus CPUs
+                allocMem += memMB;
+            } else if (state.includes('down') || state.includes('drain') || state.includes('fail')) {
+                down++;
+            }
         });
 
-        currentMetrics.nodes = { idle, allocated: alloc, down, total: lines.length };
-        // Estimativa: se nó 'alloc', assume todas CPUs alocadas (simplificação)
-        currentMetrics.cpus = { allocated: alloc * 4, total: totalCpus }; // Assumindo 4 cores/nó média
-    } else {
-        // DADOS SIMULADOS (Placeholder)
-        // Gera números aleatórios que mudam levemente para animar o gráfico
-        const totalNodes = 10;
-        const allocatedNodes = Math.floor(Math.random() * 5);
-        currentMetrics.nodes = { 
-            idle: totalNodes - allocatedNodes, 
-            allocated: allocatedNodes, 
-            down: 0,
-            total: totalNodes
-        };
-        currentMetrics.cpus = { 
-            allocated: allocatedNodes * 4 + Math.floor(Math.random() * 2), 
-            total: totalNodes * 4 
-        };
-        // Memória simulada (GB)
-        currentMetrics.memory = {
-            allocated: allocatedNodes * 8 + Math.floor(Math.random() * 4),
-            total: totalNodes * 16 // 160 GB total
-        };
-    }
-    
-    currentMetrics.timestamp = Date.now();
+        // Converte Memória para GB para facilitar a leitura
+        const totalMemGB = Math.round(totalMem / 1024);
+        const allocMemGB = Math.round(allocMem / 1024);
 
-  } catch (error) {
-    // Silencia erros para não poluir log, mantém últimas métricas válidas
-  }
+        currentMetrics.nodes = { idle, allocated: alloc, down, total: lines.length };
+        currentMetrics.cpus = { allocated: allocCpus, total: totalCpus };
+        currentMetrics.memory = { allocated: allocMemGB, total: totalMemGB };
+    }
+
+} catch (e) {
+    // Em caso de erro (ex: comando sinfo não encontrado no dev), mantemos os valores antigos ou zeros
+    console.error("Erro ao coletar métricas:", e.message);
+}
 }
 
-// Atualiza a cada 5s
-setInterval(fetchSlurmMetrics, 5000);
+// Inicia o polling a cada 5 segundos
+setInterval(fetchMetrics, 5000);
+// Executa imediatamente ao iniciar
+fetchMetrics();
 
-app.get('/api/metrics', (req, res) => {
-  res.json(currentMetrics);
-});
-
+app.get('/api/metrics', (req, res) => res.json(currentMetrics));
 
 // --- 4. WEBSOCKET (TERMINAL & JOBS) ---
 const wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws, req) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const token = url.searchParams.get('token');
-  const type = url.searchParams.get('type') || 'shell';
+const url = new URL(req.url, `http://${req.headers.host}`);
+const token = url.searchParams.get('token');
+const type = url.searchParams.get('type') || 'shell';
 
-  if (!token) return ws.close(1008, 'Token não fornecido.');
+if (!token) return ws.close(1008, 'Token ausente');
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
-    if (err) return ws.close(1008, 'Token inválido.');
-    
+jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) return ws.close(1008, 'Token inválido');
     const username = decoded.username;
 
-    // -- MODO JOB (Executa e mostra log) --
+    // --- EXECUÇÃO DE JOB (Executa e mostra log) ---
     if (type === 'job') {
-      console.log(`Iniciando Job para ${username}`);
-      ws.send(`\r\n>>> Preparando ambiente para ${username}...\r\n`);
-      
-      // Simulação de job (troque por 'sbatch' em produção)
-      const jobProcess = pty.spawn('bash', ['-c', 'echo "Iniciando..."; sleep 1; echo "Carregando módulos..."; sleep 1; for i in {1..3}; do echo "Processando etapa $i..."; sleep 0.5; done; echo "Concluído!"'], {
+    console.log(`Job iniciado por ${username}`);
+    
+    // Espera o payload JSON com o script/comando
+    ws.on('message', async (msg) => {
+        try {
+        const data = JSON.parse(msg);
+        const { payload, type: jobType } = data; // 'command' ou 'script'
+        
+        ws.send(`>>> Recebido ${jobType}. Preparando execução...\r\n`);
+
+        const timestamp = Date.now();
+        const scriptName = `job_${timestamp}.sh`;
+        const userHome = username === 'admin' ? '/tmp' : `/home/${username}`;
+        const scriptDir = `${userHome}/.openbatch_jobs`;
+        const scriptPath = `${scriptDir}/${scriptName}`;
+
+        // Cria via root, move para usuário
+        const tempFile = `/tmp/${scriptName}`;
+        await fs.promises.writeFile(tempFile, payload);
+        await execPromise(`runuser -u ${username} -- mkdir -p ${scriptDir}`);
+        await execPromise(`cp "${tempFile}" "${scriptPath}"`);
+        await execPromise(`chown ${username}:${username} "${scriptPath}"`);
+        await execPromise(`chmod +x "${scriptPath}"`);
+        await fs.promises.unlink(tempFile);
+
+        ws.send(`>>> Script salvo em: ${scriptPath}\r\n`);
+        ws.send(`>>> Executando...\r\n\r\n`);
+
+        // Define o comando. Se 'command', executa direto no bash? 
+        // Melhor prática: Sempre executar o script salvo para garantir ambiente.
+        let cmd = 'bash';
+        let args = ['-c', scriptPath];
+
+        if (username !== 'admin') {
+            cmd = 'su';
+            // Executa como o usuário login shell
+            args = ['-', username, '-c', scriptPath];
+        }
+
+        const jobProcess = pty.spawn(cmd, args, {
+            name: 'xterm-color', cols: 80, rows: 30,
+            cwd: userHome, env: process.env
+        });
+
+        jobProcess.onData(d => { if (ws.readyState === ws.OPEN) ws.send(d); });
+        jobProcess.onExit(() => { 
+            if (ws.readyState === ws.OPEN) {
+            ws.send('\r\n>>> Execução finalizada.\r\n');
+            ws.close(); 
+            }
+        });
+        
+        ws.on('close', () => { try { jobProcess.kill(); } catch(e){} });
+
+        } catch (e) {
+        ws.send(`\r\nErro ao processar job: ${e.message}\r\n`);
+        ws.close();
+        }
+    });
+    return;
+    }
+
+    // --- TERMINAL INTERATIVO ---
+    try {
+    let shell = 'bash';
+    let args = [];
+    if (username !== 'admin') { shell = 'su'; args = ['-', username]; }
+
+    const ptyProcess = pty.spawn(shell, args, {
         name: 'xterm-color', cols: 80, rows: 30,
         cwd: process.env.HOME, env: process.env
-      });
-
-      jobProcess.onData(d => { if (ws.readyState === ws.OPEN) ws.send(d); });
-      jobProcess.onExit(() => { if (ws.readyState === ws.OPEN) ws.close(); });
-      ws.on('close', () => { try { jobProcess.kill(); } catch(e){} });
-      return;
+    });
+    
+    ptyProcess.onData(data => { if (ws.readyState === ws.OPEN) ws.send(data); });
+    ws.on('message', data => { ptyProcess.write(data.toString()); });
+    ws.on('close', () => { try { ptyProcess.kill(); } catch(e) {} });
+    } catch (e) {
+    ws.close();
     }
-
-    // -- MODO TERMINAL INTERATIVO --
-    console.log(`Terminal conectado: ${username}`);
-    try {
-      let shell = 'bash';
-      let args = [];
-
-      if (username !== 'admin') {
-         shell = 'su'; // Requer que o node rode como root
-         args = ['-', username];
-      }
-
-      const ptyProcess = pty.spawn(shell, args, {
-        name: 'xterm-color',
-        cols: 80,
-        rows: 30,
-        cwd: process.env.HOME, 
-        env: process.env,
-      });
-      
-      ptyProcess.onData(data => { if (ws.readyState === ws.OPEN) ws.send(data); });
-      ws.on('message', data => { ptyProcess.write(data.toString()); });
-      ws.on('close', () => { try { ptyProcess.kill(); } catch(e) {} });
-
-    } catch (error) {
-      console.error(`Erro Terminal:`, error.message);
-      ws.close();
-    }
-  });
+});
 });
 
-server.listen(port, () => {
-  console.log(`Servidor backend rodando em http://localhost:${port}`);
-});
+server.listen(port, () => console.log(`Backend rodando na porta ${port}`));
