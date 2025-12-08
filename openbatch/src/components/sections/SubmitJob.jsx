@@ -224,7 +224,7 @@ function SubmitJob() {
               <input type="number" id="job-nodes" value={formConfig.nodes} onChange={handleConfigChange} disabled={isRunning} />
             </div>
             <div className="form-group">
-              <label>Tarefas/Nó</label>
+              <label>Tarefas por Nó</label>
               <input type="number" id="job-tasks" value={formConfig.tasks} onChange={handleConfigChange} disabled={isRunning} />
             </div>
             <div className="form-group">
@@ -232,7 +232,7 @@ function SubmitJob() {
               <input type="number" id="job-memory" value={formConfig.memory} onChange={handleConfigChange} disabled={isRunning} />
             </div>
             <div className="form-group">
-              <label>Tempo</label>
+              <label>Tempo (HH:MM:SS)</label>
               <input type="text" id="job-time" value={formConfig.time} onChange={handleConfigChange} disabled={isRunning} />
             </div>
             <div className="form-group">

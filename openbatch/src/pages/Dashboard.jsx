@@ -9,7 +9,7 @@ import UploadModules from '../components/sections/UploadModules.jsx';
 import Observability from '../components/sections/Observability.jsx';
 
 function Dashboard({ user, onLogout }) {
-  const [activeTab, setActiveTab] = useState('terminal');
+  const [activeTab, setActiveTab] = useState('submitJob');
 
   return (
     <div className="dashboard-layout">
