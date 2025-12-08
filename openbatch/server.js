@@ -12,13 +12,13 @@ import { exec } from 'child_process';
 import util from 'util';
 import multer from 'multer';
 import fs from 'fs';
+import 'dotenv/config'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const execPromise = util.promisify(exec);
 
-const JWT_SECRET = 'sua-chave-secreta-super-longa-e-aleatoria-aqui';
 const port = 8080;
 const BLOCKED_USERS = ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', 'gnats', 'nobody'];
 const BLOCKED_EXTENSIONS = ['.exe', '.dll', '.so', '.bin'];
@@ -37,10 +37,10 @@ app.post('/login', (req, res) => {
     const { username, password } = req.body;
     if (!username || !password) return res.status(400).json({ message: 'Campos obrigatórios.' });
 
-    // if (username === 'admin' && password === 'admin') {
-    //     const token = jwt.sign({ username: 'admin' }, JWT_SECRET, { expiresIn: '1h' });
-    //     return res.status(200).json({ message: 'Login DEV.', token });
-    // }
+    if (username === 'admin' && password === process.env.ADMIN_PASSWORD) {
+        const token = jwt.sign({ username: 'admin' }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        return res.status(200).json({ message: 'Login DEV.', token });
+    }
 
     if (BLOCKED_USERS.includes(username.toLowerCase())) return res.status(403).json({ message: 'Usuário bloqueado.' });
 
@@ -50,7 +50,7 @@ app.post('/login', (req, res) => {
             console.error(`Erro PAM ${username}:`, err);
             return res.status(401).json({ message: 'Credenciais inválidas.' });
         }
-        const token = jwt.sign({ username }, JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ username }, process.env.JWT_SECRET, { expiresIn: '1h' });
         res.status(200).json({ message: 'Sucesso.', token });
         });
     } catch (e) {
@@ -65,7 +65,7 @@ app.post('/api/upload', upload.single('file'), (req, res) => {
 
   if (!token) return res.status(401).json({ message: 'Token não fornecido' });
 
-  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
+  jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
     if (err) return res.status(403).json({ message: 'Token inválido' });
 
     const username = decoded.username;
@@ -241,7 +241,7 @@ const type = url.searchParams.get('type') || 'shell';
 
 if (!token) return ws.close(1008, 'Token ausente');
 
-jwt.verify(token, JWT_SECRET, (err, decoded) => {
+jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
     if (err) return ws.close(1008, 'Token inválido');
     const username = decoded.username;
 
