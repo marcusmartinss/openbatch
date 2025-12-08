@@ -8,7 +8,6 @@ function Header({ user, onLogout }) {
       </div>
       
       <div className="user-info">
-        {/* Usando as classes .user-greeting e .user-name definidas no CSS */}
         <span className="user-greeting">
           Olá, <span className="user-name">{user}</span>
         </span>

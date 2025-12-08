@@ -43,6 +43,8 @@ function LoginPage({ onLogin }) {
 
   return (
     <div className="login-page-container">
+      <h1 className="app-brand-title">OpenBatch</h1>
+      
       <div className="login-box">
         <h2>Login</h2>
         <form onSubmit={handleSubmit}>
