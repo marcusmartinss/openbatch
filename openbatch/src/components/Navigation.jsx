@@ -2,8 +2,8 @@ import React from 'react';
 
 function Navigation({ activeTab, setActiveTab }) {
   const tabs = [
-    { id: 'terminal', label: 'Terminal' },
     { id: 'submitJob', label: 'Submeter Job' },
+    { id: 'terminal', label: 'Terminal' },
     { id: 'uploadModules', label: 'Upload Módulos' },
     { id: 'observability', label: 'Observabilidade' },
   ];
