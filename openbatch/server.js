@@ -1,8 +1,8 @@
+import 'dotenv/config'
 import express from 'express';
 import http from 'http';
 import { WebSocketServer } from 'ws';
 import pty from 'node-pty';
-import os from 'os';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { pamAuthenticate } from 'node-linux-pam';
@@ -12,7 +12,6 @@ import { exec } from 'child_process';
 import util from 'util';
 import multer from 'multer';
 import fs from 'fs';
-import 'dotenv/config'
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
