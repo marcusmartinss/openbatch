@@ -21,11 +21,11 @@ function Dashboard({ user, onLogout }) {
       />
 
       <main className="container">
-        <div style={{ display: activeTab === 'terminal' ? 'block' : 'none', height: '100%' }}>
-          <Terminal />
+        <div style={{ display: activeTab === 'submitJob' ? 'block' : 'none', height: '100%' }}>
+          <SubmitJob />
         </div>
 
-        {activeTab === 'submitJob' && <SubmitJob />}
+        {activeTab === 'terminal' && <Terminal />}
         {activeTab === 'uploadModules' && <UploadModules />}
         {activeTab === 'observability' && <Observability />}
       </main>
