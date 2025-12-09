@@ -18,7 +18,6 @@ const __dirname = path.dirname(__filename);
 
 const execPromise = util.promisify(exec);
 
-const port = 8080;
 const BLOCKED_USERS = ['root', 'daemon', 'bin', 'sys', 'sync', 'games', 'man', 'lp', 'mail', 'news', 'uucp', 'proxy', 'www-data', 'backup', 'list', 'irc', 'gnats', 'nobody'];
 const BLOCKED_EXTENSIONS = ['.exe', '.dll', '.so', '.bin'];
 
@@ -328,4 +327,4 @@ jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
 });
 });
 
-server.listen(port, () => console.log(`Backend rodando na porta ${port}`));
+server.listen(process.env.PORT, () => console.log(`Backend rodando na porta ${process.env.PORT}`));
